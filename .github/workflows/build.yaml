@@ -42,6 +42,7 @@ jobs:
           IMAGE_TAG: ${{ github.event.inputs.version }}
           NEXT_PUBLIC_LICENSE_CONSENT: agree
           CALCOM_TELEMETRY_DISABLED: 1
+          NEXT_PUBLIC_WEBAPP_URL: http://localhost:3000
         run: |
           echo $ECR_REPOSITORY:$IMAGE_TAG
           DOCKER_BUILDKIT=0 docker compose build \
