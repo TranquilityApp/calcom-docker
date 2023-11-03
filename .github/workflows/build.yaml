@@ -1,0 +1,54 @@
+name: 'Staging Build'
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Semantic version number. E.g v1.0.1'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          ref: main
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ca-central-1
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+      - name: Start build Database
+        id: database
+        env:
+          POSTGRES_USER: unicorn_user 
+          POSTGRES_PASSWORD: magical_password 
+          POSTGRES_DB: calendso
+        run: |
+          docker-compose up -d database
+      - name: Build Docker Image
+        id: build
+        env:
+          LICENSE: ${{ secrets.CALCOM_LICENSE }}
+          NEXTAUTH_SECRET: ${{ secrets.STAGING_NEXTAUTH_SECRET }}
+          CALENDSO_ENCRYPTION_KEY: ${{ secrets.STAGING_CALENDSO_ENCRYPTION_KEY }}
+          ECR_REPOSITORY: 584009860414.dkr.ecr.ca-central-1.amazonaws.com/cal
+          IMAGE_TAG: ${{ github.event.inputs.version }}
+          NEXT_PUBLIC_LICENSE_CONSENT: agree
+          CALCOM_TELEMETRY_DISABLED: 1
+        run: |
+          echo $ECR_REPOSITORY:$IMAGE_TAG
+          DOCKER_BUILDKIT=0 docker compose build \
+          --build-arg DATABASE_URL=postgresql://unicorn_user:magical_password@172.18.0.2:5432/calendso \
+          --build-arg LICENSE=$LICENSE \
+          --build-arg NEXTAUTH_SECRET=$NEXTAUTH_SECRET \
+          --build-arg CALENDSO_ENCRYPTION_KEY=$CALENDSO_ENCRYPTION_KEY \
+          --build-arg ECR_REPOSITORY=$ECR_REPOSITORY \
+          --build-arg NEXT_PUBLIC_LICENSE_CONSENT=$NEXT_PUBLIC_LICENSE_CONSENT \
+          --build-arg CALCOM_TELEMETRY_DISABLED=$CALCOM_TELEMETRY_DISABLED calcom
+          
+          docker tag calcom:latest $ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REPOSITORY:$IMAGE_TAG 
