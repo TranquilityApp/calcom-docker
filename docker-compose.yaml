@@ -21,7 +21,7 @@ services:
       - stack
 
   calcom:
-    image: calcom.docker.scarf.sh/calcom/cal.com
+    image: 584009860414.dkr.ecr.ca-central-1.amazonaws.com/cal
     build:
       context: .
       dockerfile: Dockerfile
